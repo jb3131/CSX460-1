@@ -1,4 +1,9 @@
-# Boston Housing
+---
+title: "Boston Housing"
+author: 'Jennifer Borkowsky (email: jb3131@gmail.com)'
+date: "Wednesday, September 23, 2015"
+output: html_document
+---
 
 The *mlbench* package contains the data set `BostonHousing`. 
 
@@ -8,15 +13,76 @@ This is a `rmarkdown` Document. You can use `rmarkdown` to produce a Word Doc
 file, a presentation, html file, etc. Please just submit the code.
 
 
-```r
+*(a) Load libraries, get data*
+```{r, warning=F}
+library(reshape2)
 library(mlbench)
 library(magrittr)
 library(ggplot2)
 data(BostonHousing)
-
-# Place your code here:
-
-
 ```
 
+*(b) define root mean squared error function to use in model evaluation*
+```{r}
+rmse <- function(y,yhat)
+  (y-yhat)^2 %>% mean %>% sqrt
+```
 
+*(c) Data exploration*
+
+*Plot response variable - median value of homes*
+```{r, fig.width=4, fig.height=3, warning=F}
+qplot(BostonHousing$medv)
+```
+
+*Median value of homes is slightly skewed to right; possible violation of linear regression assumptions*
+
+*Examine correlation coefficients for pairs of numeric variables in BostonHousing data set*
+```{r}
+cor(BostonHousing[sapply(BostonHousing, is.numeric)]) 
+
+#Propery tax and index of accessibility to radial highways are highly correlated, check plot
+ggplot(BostonHousing, aes(x=tax, y=rad)) +
+  geom_point() +
+  geom_smooth(method=lm)
+#Looks as though an outlier is causing correlation
+
+#Other highly correlated variables (|r|>.7):
+pairs(~nox+indus+tax+age+dis, data=BostonHousing)
+#correlation between nitric oxide concentration and distance to employment centers could be a problem
+```
+
+*(d) Model fitting*
+```{r}
+# fit model with all predictors
+fit <- lm(medv~ . , data=BostonHousing)
+summary(fit)
+# evaluate model using root mean squared error as a measure of fit
+rmse(fit$fitted.values, BostonHousing$medv)
+```
+
+```{r}
+# remove non-significant predictor age
+fit2 <- lm(medv~ . -age , data=BostonHousing)
+summary(fit2)
+# evaluate model using root mean squared error as a measure
+rmse(fit2$fitted.values, BostonHousing$medv)
+```
+
+```{r}
+# remove non-significant predictor proportion of non-retail business acres
+fit3 <- lm(medv~ . -age -indus , data=BostonHousing)
+summary(fit3)
+# evaluate model using root mean squared error as a measure
+rmse(fit3$fitted.values, BostonHousing$medv)
+```
+
+*All remaining predictors are significant.  This model has the highest RMSE, but it is only a very slight increase, and due to a more parsimonious model*
+
+*Check predicted values against actual values of median home value*
+```{r, fig.width=6, fig.height=5}
+df <- data.frame(BostonHousing$medv, fit3$fitted.values)
+ggplot(melt(df), aes(value, fill = variable)) + geom_histogram(position = "dodge")
+```
+
+*The model seems to give a good prediction of median home values given the set of predictors.*
