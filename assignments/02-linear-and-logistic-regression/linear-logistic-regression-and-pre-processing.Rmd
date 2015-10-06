@@ -41,9 +41,10 @@ Show all code used to arrive at the answers.
 ## ***APM*** 6.2 (a)-(d)
 
 ```{r}
-# Place your code here
-
-
+library(AppliedPredictiveModeling)
+library(caret)
+library(pls)
+data(permeability)
 ```
 
 (a) No response required.
@@ -51,17 +52,36 @@ Show all code used to arrive at the answers.
 (b)   
 
 ```{r}
-# place R code here
+fp <- fingerprints[, -nearZeroVar(fingerprints)]
+ncol(fp)
 ```
+
+389 predictors are left for modeling
 
 (c)
 ```{r}
-# place R code here
+# add response data to predictors
+fp <- data.frame(fp)
+fp$perm <-permeability
+
+## 75% of the sample size
+sampsize <- floor(0.75 * nrow(filtered))
+
+## set the seed to make partition reproductible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(filtered)), size = sampsize)
+
+## split data into training and test data sets
+train <- fp[train_ind, ]
+test <- fp[-train_ind, ]
 ```
 
 (d) 
 ```{r}
-# place R code here
+plsFit <- plsr(perm ~ ., data=train, validation="LOO")
+summary(plsFit)
+plot(RMSEP(plsFit))
+predict(plsFit, test)
 ```
 
 
