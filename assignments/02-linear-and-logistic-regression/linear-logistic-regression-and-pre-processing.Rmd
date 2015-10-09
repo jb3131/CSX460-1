@@ -1,7 +1,7 @@
 ---
 title: "week4 assignments"
-author: "Christopher Brown"
-date: "September 30, 2015"
+author: "Jennifer Borkowsky"
+date: "October 8, 2015"
 output: html_document
 ---
 
@@ -39,6 +39,56 @@ For questions requiring:
 Show all code used to arrive at the answers.
 
 
+## Finish in-class assignments:
+Using only Recreate the model, providing a new estimate for `ab/g` and the RMSE, using:
+- 5-Fold CV
+- Bootstrap
+
+```{r}
+set.seed(314159)
+library(plyr)
+library(magrittr)
+library(ggplot2)
+data(baseball)
+
+# define function to calculate root mean squared error
+rmse <- function(y,yhat)
+  (y-yhat)^2 %>% mean %>% sqrt
+
+# remove rows with players who had zero games
+baseball <- baseball[baseball$g!=0,] 
+#Create 5 folds
+baseball$fold <- floor(runif(nrow(baseball), min=1, max=6))
+
+# perform k-fold cross validation to estimate RMSE
+rmse.vector <- NULL
+for(k in 1:5){
+
+  fit <- lm(ab ~ g+0, data=baseball[baseball$fold!=k,])
+  pred <- predict(fit, newdata=baseball[baseball$fold==k,])
+  rmse1 <- rmse(baseball[which(baseball$fold==k), "ab"], pred)
+  
+  rmse.vector <- c(rmse.vector, rmse1)
+}
+
+mean(rmse.vector)
+
+# perform bootstrap estimation of RMSE
+rmse.vector <- NULL
+for (i in 1:10){
+   train.ind <- sample(seq(1:nrow(baseball)), nrow(baseball), replace=T)
+   train <- baseball[train.ind,]
+   test <- baseball[-train.ind,]
+   
+   fit <- lm(ab ~ g+0, data=train)
+   pred <- predict(fit, newdata=test)
+   rmse1 <- rmse(test$ab, pred)
+  
+   rmse.vector <- c(rmse.vector, rmse1)
+}
+
+mean(rmse.vector)
+```
 
 ## ***APM*** 6.2 (a)-(d)
 
@@ -87,14 +137,63 @@ predict(plsFit, test)
 ```
 
 
-## ***APM*** 6.3 
-
 
 ## German Credit Data ## 
 
 The University of California, Irvine [Machine Learning Repository](https://archive.ics.uci.edu/ml/index.html). One popular data set is the [German Credit Data](https://archive.ics.uci.edu/ml/datasets/Statlog+%28German+Credit+Data). Using this data, create a logistic regression model. 
 
+```{r}
+library(car)  
+cred <- read.csv(file="C:/Users/jbork/CSX460-1/data/german_credit.csv", head=T, sep=",")
+# explore data
+names(cred)
+sapply(cred, class)  # check for var type - all are integers
+sapply(cred, table)  # check for distribution of categories
+# check histograms
+# transform skewed continuious variables
+hist(cred$Duration.of.Credit..month.) # right skewed
+any(Duration.of.Credit..month.==0)
+cred$Duration.of.Credit..month. <- log(cred$Duration.of.Credit..month.)
+hist(cred$Purpose) # slight right skewed, don't transform
+hist(cred$Age..years.) # right skewed
+Age..years. <- log(Age..years.)
+any(Age..years.==0)
+# collapse categories with sparse counts
+attach(cred)
+Payment.Status.of.Previous.Credit <- ifelse(Payment.Status.of.Previous.Credit<2,1,ifelse(Payment.Status.of.Previous.Credit==2,2,3))
+Value.Savings.Stocks <- ifelse(Value.Savings.Stocks<3, 1, 2)
+Sex...Marital.Status <- ifelse(Sex...Marital.Status<3, 1, 2)
+Guarantors <- ifelse(Guarantors>1, 2, 1)
+Concurrent.Credits <- ifelse(Concurrent.Credits<3,1,2)
+No.of.Credits.at.this.Bank <- ifelse(No.of.Credits.at.this.Bank==1,1,2)
+detach(cred)
+# split into train and test
+train_ind <- sample(seq_len(nrow(cred)), size = .5*nrow(cred))
+train <- cred[train_ind, ]
+test <- cred[-train_ind, ]
 
+# fit model on training data
+fit <- glm(Creditability ~ ., data=cred, family="binomial")
+summary(fit)
+# remove predictors with pvals < .05
+fit <- glm(Creditability ~ Account.Balance + Duration.of.Credit..month. + Payment.Status.of.Previous.Credit + Credit.Amount + Value.Savings.Stocks + Length.of.current.employment + Instalment.per.cent + Sex...Marital.Status + Guarantors + Most.valuable.available.asset + Concurrent.Credits + Type.of.apartment + Foreign.Worker, data=cred, family="binomial")
+summary(fit) # all predictors significant at .05 level
 
+# predict credit score for test data set
+test$fit <- predict(fit, test, type='response')
+qplot(fit, data=test, fill=as.factor(Creditability ))
+qplot(x=fit, data=test, fill=as.factor(Creditability)) + facet_grid(Creditability ~ . )
 
+# predict creditability for the test data 
+test$fit.class <- (predict(fit, test, type='response') > .5) *1
+(tab <- table(test$Creditability, test$fit.class))
+
+# calculate prevalance, accuracy, error rate, and true positive rate
+attach(test)
+sum(Creditability)/nrow(test)               # prevalence: 0.69
+( accuracy = sum(diag(tab))/sum(tab) )      # accuracy  : 0.77
+1- accuracy                                 # error rate: 0.23
+sum( Creditability == fit.class & Creditability )/sum(Creditability) # TPR: 0.91
+detach(test)
+```
 
