@@ -27,6 +27,11 @@ file="quizzes/binomial-performance/data.RData"
 load(file)
 
 # place work here
+ttt <- load("C:/Users/jbork/Desktop/data.RData")
+fit <- train(outcome ~ . , data=train, family="binomial")
+predclass <- predict(fit, newdata=test)
+predprob <- predict(fit, newdata=test, type="prob")
+
 ```
 
 
@@ -40,7 +45,7 @@ Based on your model and the test set, what is your disadvantage when O holds the
 
 
 ```{r}
-# place work here
+confusionMatrix(data = predclass, test$outcome)
 ```
 
 - If your contingency table looks like this:
@@ -50,6 +55,8 @@ observed   negative positive
   negative       83       98
   positive       66      296
   
+    Error Rate  :
+
   
 Calculate
 
@@ -61,9 +68,17 @@ Calculate
     Recall      : 
     TPR         :
     Prevalance  :
-    Error Rate  :
 
-
+```{r}
+(fp <- 98/(296+98))
+(tp <- 296/(296+66))
+(acc <- (296+83)/(296+83+66+98))
+(sens <- tp)
+(sp <- 83/(83+98))
+(rec <- tp)
+(tpr <- tp)
+(prev <- (296+66)/(296+83+66+98))
+```
 
 # Extra Credit: (O pts)
 - What is the "only winning move"?
