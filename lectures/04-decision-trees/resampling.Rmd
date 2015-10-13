@@ -8,6 +8,9 @@ output: html_document
 
 ```{r}
 set.seed(314159)
+install.packages('plyr')
+# library(plyr)
+data(baseball,package="plyr")
 ```
 
 
@@ -24,15 +27,20 @@ A very simple model to predict the number of at-bats/game **each** player has pe
 library(plyr)
 data(baseball)
 
+<<<<<<< HEAD
 
 baseball$pred_abpg <- with(baseball, sum(ab)/sum(g))
 baseball$error <- (baseball$ab/baseball$g)-baseball$pred_abpg
 sqrt((sum(baseball$error^2, na.rm=T)) / length(baseball$error))
+=======
+abpg = with( baseball, sum(ab)/sum(g) )
+
+>>>>>>> 242c1d2d38fe650b0de761741c11af2196465af5
 ```
 
 
 
-- Create a better model using only number of games as a predictor
+- Create a better model using only number of games (g) as a predictor
 
 ```{r}
 fit <- lm(ab ~ g, data=baseball)

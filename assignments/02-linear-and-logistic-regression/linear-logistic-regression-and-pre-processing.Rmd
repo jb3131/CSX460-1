@@ -39,10 +39,17 @@ For questions requiring:
 Show all code used to arrive at the answers.
 
 
+<<<<<<< HEAD
 ## Finish in-class assignments:
 Using only Recreate the model, providing a new estimate for `ab/g` and the RMSE, using:
 - 5-Fold CV
 - Bootstrap
+=======
+## Finish in-class assignments
+
+
+## ***APM*** 6.2 (a)-(d)
+>>>>>>> 242c1d2d38fe650b0de761741c11af2196465af5
 
 ```{r}
 set.seed(314159)
