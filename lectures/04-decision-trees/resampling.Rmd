@@ -21,7 +21,13 @@ A very simple model to predict the number of at-bats/game **each** player has pe
 - Show that this is a bad:
 
 ```{r}
+library(plyr)
+data(baseball)
 
+
+baseball$pred_abpg <- with(baseball, sum(ab)/sum(g))
+baseball$error <- (baseball$ab/baseball$g)-baseball$pred_abpg
+sqrt((sum(baseball$error^2, na.rm=T)) / length(baseball$error))
 ```
 
 
@@ -29,17 +35,17 @@ A very simple model to predict the number of at-bats/game **each** player has pe
 - Create a better model using only number of games as a predictor
 
 ```{r}
-
-
+fit <- lm(ab ~ g, data=baseball)
+summary(fit)
 ```
 
 
 - Calculate the "Apparent" *RMSE* of this model.    
 
 ```{r}
-
-
-
+rmse <- function(y,yhat)
+  (y-yhat)^2 %>% mean %>% sqrt
+rmse(fit$fitted.values, baseball$ab)
 ```
 
 
@@ -48,7 +54,7 @@ Using only Recreate the model, providing a new estimate for `ab/g` and the RMSE,
 - Bootstrap
 
 ```{r}
-
+bs <- sample(nrow(baseball), replace=T)
 
 
 ```
