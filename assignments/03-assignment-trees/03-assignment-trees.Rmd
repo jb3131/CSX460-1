@@ -22,3 +22,128 @@ In Applied Predictive Modeling (APM) read:
 8.4 (a) - (b)
 14.2
 
+library(mlbench)
+library(randomForest)
+library(caret)
+library(party)
+library(gbm)
+
+# (a)
+set.seed(200)
+simulated <- mlbench.friedman1(200, sd = 1)
+simulated <- cbind(simulated$x, simulated$y)
+simulated <- as.data.frame(simulated)
+colnames(simulated)[ncol(simulated)] <- "y"
+
+model1 <- randomForest( y ~ ., data=simulated, importance=TRUE, ntree=1000 )
+varImpPlot(model1)
+importance(model1, type=1)
+
+# Q: Did the random forest model significantly use the uninformative predictors
+# A: No
+
+# (b) Now add an additional predictor that is highly correlated with one of the
+# informative predictors.
+
+simulated$duplicate1 <- simulated$V1 + rnorm(200) * .1
+cor(simulated$duplicate1, simulated$V1)  
+
+model2 <- randomForest( y ~ ., data=simulated, importance=TRUE, ntree=1000 )
+varImpPlot(model2)
+importance(model2, type=1)  # Importance score for V1 was split between V1 and correlated var
+
+# What happens when you add another predictor that is also highly correlated with V1?
+
+simulated$duplicate2 <- simulated$V1 + rnorm(200) * .1
+cor(simulated$duplicate2, simulated$V1)   
+
+model3 <- randomForest( y ~ ., data=simulated, importance=TRUE, ntree=1000 )
+varImpPlot(model3)
+importance(model3, type=1)  # Importance score change very little after adding second correlated predictor
+
+# (c)
+# Use the cforest function in the party package to fit a random forest model
+# using conditional inference trees.
+
+simulated$duplicate1 = NULL  # remove correlated predictors
+simulated$duplicate2 = NULL
+
+model4 <- cforest( y ~ ., data=simulated )
+varimp(model4, conditional=F)
+varimp(model4, conditional=T)
+
+# add a correlated predictor
+simulated$duplicate1 <- simulated$V1 + rnorm(200) * .1
+model5 <- cforest( y ~ ., data=simulated )
+varimp(model5, conditional=F)
+varimp(model5, conditional=T)
+
+# add another correlated predictor
+simulated$duplicate2 <- simulated$V1 + rnorm(200) * .1
+model6 <- cforest( y ~ ., data=simulated )
+varimp(model6, conditional=F)
+varimp(model6, conditional=T)
+
+#  Do these importances show the same pattern as the traditional random forest model?
+#  No, in the party package, not as much importance is given to the correlated predictor
+#  if we condition on the important predictor.
+#  The randmom forest packages uses a permutation test which consideres each predictor
+#  to be indpeendent of the response as well as all other predictors.  Since this is not
+#  true when we add correlated predictors, the party package does a better job at estimating
+#  importance of predictors when use use option condition=T.
+#  predictors are obviously not independent, we get high importance scores. 
+
+# 8.4. Use a single predictor in the solubility data, such as the molecular weight
+# or the number of carbon atoms and fit several models:
+
+
+# (a) A simple regression tree
+
+library(AppliedPredictiveModeling)
+library(rpart)
+
+data(solubility)
+ls(pattern = "^solT")
+solTrain <- data.frame(cbind(sol=solTrainY, weight=solTrainXtrans$MolWeight))
+solTest <- data.frame(cbind(sol=solTestY, weight=solTestXtrans$MolWeight))
+
+# train model
+fit <- rpart( sol ~ weight, data=solTrain, method="anova")
+plot(fit)
+plot(fit, uniform=TRUE, main="Classification Tree for Solubility")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+print(fit)  #  The output shows the split variable/value, along with how many samples
+#  were partitioned into the branch
+printcp(fit)
+summary(fit)
+
+# predict solubility using test data 
+model1.pred <-  predict(model1, newdata=solTest)
+
+# plot predicted vs actual solubility
+plot(solTest$sol,model1.pred, xlab='log(Solubility)', ylab='Predicted log(Solubility)')
+
+
+# (b) A random forest model
+fit2 <- randomForest(sol ~ weight, data=solTrain, ntrees=1000 ) 
+print(fit2)
+
+# predict solubility using test data
+fit2.pred <- predict(fit2,newdata=solTest)
+
+# 14.2
+
+library(C50)
+data(churn)
+## Two objects are loaded: churnTrain and churnTest
+str(churnTrain)
+table(churnTrain$Class)
+
+nearZeroVar(churnTrain)
+churnTrain <- churnTrain[,-6]
+churnTest <- churnTest[,-6]
+
+set.seed(476)
+ctrl <- trainControl( summaryFunction=twoClassSummary, classProbs=T )
+rpartGrouped <- train(x = churnTrain[,-19], y = churnTrain$churn, method = "rpart", tuneLength = 30, metric = "ROC", trControl = churnTest)
+
